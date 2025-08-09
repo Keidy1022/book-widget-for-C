@@ -1,57 +1,32 @@
-const express = require('express');
-const fetch = require('node-fetch');
-const csv = require('csv-parser');
-const cors = require('cors');
-const { Readable } = require('stream');
-
+const express = require("express");
+const axios = require("axios");
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
 
-// 숫자 변환 함수
-const cleanNumber = (value) => {
-  if (!value) return 0;
-  return parseFloat(value.replace(/,/g, '').trim());
-};
-
-app.get('/sheet', async (req, res) => {
+app.get("/data", async (req, res) => {
   const sheetUrl = req.query.url;
-
   if (!sheetUrl) {
-    return res.status(400).json({ error: 'Missing url parameter' });
+    return res.status(400).json({ error: "Missing Google Sheets URL" });
   }
 
   try {
-    const response = await fetch(sheetUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch sheet: ${response.statusText}`);
-    }
+    // Google Sheets JSON 불러오기
+    const response = await axios.get(sheetUrl);
+    const data = response.data;
 
-    const csvText = await response.text();
-    const rows = [];
+    // E2, F2, G2 셀 값 읽기 (Apps Script JSON 형식 기준)
+    const bookCount = data.values[1][4]; // E2
+    const pageCount = data.values[1][5]; // F2
+    const thickness = data.values[1][6]; // G2
 
-    Readable.from(csvText)
-      .pipe(csv({ headers: false }))
-      .on('data', (row) => {
-        rows.push(Object.values(row));
-      })
-      .on('end', () => {
-        if (rows.length > 1) {
-          const books = cleanNumber(rows[1][4]);     // E2
-          const pages = cleanNumber(rows[1][5]);     // F2
-          const thickness = cleanNumber(rows[1][6]); // G2
+    const summary = `📚 ${bookCount}권, 📄 ${pageCount}페이지, 📏 ${thickness}cm`;
 
-          res.json({ books, pages, thickness });
-        } else {
-          res.status(400).json({ error: 'No data found in sheet' });
-        }
-      });
-
+    res.json({ summary });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Failed to fetch data", details: error.message });
   }
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
