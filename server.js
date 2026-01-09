@@ -10,7 +10,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/data", async (req, res) => {
-  // 🔥 Android 위젯이 보내는 파라미터명
+  // Android 위젯이 보내는 파라미터명
   const sheetUrl = req.query.sheetUrl;
 
   if (!sheetUrl) {
@@ -24,7 +24,19 @@ app.get("/data", async (req, res) => {
 
     const books = data.books;
     const pages = data.pages;
-    const thickness = parseFloat(data.thickness).toFixed(2); // 소수점 2자리
+
+    // 🔥 thickness 안전 파싱 (문자, cm, 콤마 등 제거)
+    const rawThickness = data.thickness;
+    const cleaned = String(rawThickness ?? "")
+      .replace(",", ".")
+      .replace(/[^0-9.\-]/g, "");
+
+    const thicknessNum = Number.parseFloat(cleaned);
+    const thickness = Number.isFinite(thicknessNum)
+      ? thicknessNum.toFixed(2)
+      : "0.00";
+
+    console.log("raw thickness =", rawThickness, "→ cleaned =", cleaned);
 
     res.json({
       books,
@@ -41,4 +53,5 @@ app.get("/data", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 
