@@ -3,8 +3,16 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 요청 들어오는지 로그로 확인
+app.use((req, res, next) => {
+  console.log(`[REQ] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 app.get("/data", async (req, res) => {
-  const sheetUrl = req.query.url;
+  // 🔥 Android 위젯이 보내는 파라미터명
+  const sheetUrl = req.query.sheetUrl;
+
   if (!sheetUrl) {
     return res.status(400).json({ error: "Missing Google Sheets URL" });
   }
@@ -18,15 +26,14 @@ app.get("/data", async (req, res) => {
     const pages = data.pages;
     const thickness = parseFloat(data.thickness).toFixed(2); // 소수점 2자리
 
-    const summary = `📚 ${books}권, 📄 ${pages}페이지, 📏 ${thickness}cm`;
-
     res.json({
-      summary,
       books,
       pages,
       thickness
     });
+
   } catch (error) {
+    console.error("Fetch failed:", error.message);
     res.status(500).json({ error: "Failed to fetch data", details: error.message });
   }
 });
@@ -34,3 +41,4 @@ app.get("/data", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
